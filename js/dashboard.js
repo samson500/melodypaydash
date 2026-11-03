@@ -535,8 +535,11 @@
           '</div>' +
           '<label class="field"><span>Account number</span><input class="input" name="account" inputmode="numeric" maxlength="10" placeholder="10-digit account number" value="' + esc(bank.account || '') + '" /><em class="err"></em></label>' +
           '<div class="acct-status" id="acctStatus"></div>' +
-          '<label class="field"><span>Account name</span><input class="input" name="acctName" placeholder="Auto-verified name" value="' + esc(bank.name || '') + '" readonly title="Verified automatically" /><em class="err"></em></label>' +
-          '<button class="btn-primary full" type="submit">' + icon('bank') + ' Save Account</button>' +
+          '<button type="button" class="btn-ghost full" id="verifyBtn">' + icon('shield') + ' Verify Account</button>' +
+          '<div id="verifiedBox"' + (bank.verified && bank.name ? '' : ' hidden') + ' style="margin-top:12px">' +
+            '<label class="field"><span>Account name</span><input class="input" name="acctName" placeholder="Auto-verified name" value="' + esc(bank.name || '') + '" readonly title="Verified automatically" /><em class="err"></em></label>' +
+            '<button class="btn-primary full" type="submit">' + icon('bank') + ' Save Account</button>' +
+          '</div>' +
         '</form></section>' +
 
       '<section class="card"><h2 class="card-title">Session</h2>' +
@@ -548,7 +551,6 @@
   let current = 'home';
 
   let banksCache = null;
-  let verifyTimer = null;
   let verifiedAccount = null;
 
   async function populateBanks() {
@@ -578,34 +580,41 @@
     dd.classList.add('open');
   }
 
+  function clearVerification() {
+    verifiedAccount = null;
+    const nm = document.querySelector('#bankForm [name="acctName"]');
+    if (nm) nm.value = '';
+    const box = document.getElementById('verifiedBox');
+    if (box) box.hidden = true;
+    const st = document.getElementById('acctStatus');
+    if (st) { st.textContent = ''; st.className = 'acct-status'; }
+  }
+
   function selectBank(code, name) {
     const s = document.getElementById('bankSearch');
     const c = document.getElementById('bankCode');
     if (s) s.value = name;
     if (c) c.value = code;
-    verifiedAccount = null;
-    const nm = document.querySelector('#bankForm [name="acctName"]');
-    if (nm) nm.value = '';
+    clearVerification();
+    const st = document.getElementById('acctStatus'); if (st) { st.textContent = ''; st.className = 'acct-status'; }
     const dd = document.getElementById('bankDropdown');
     if (dd) dd.classList.remove('open');
-    const form = document.getElementById('bankForm');
-    if (form) scheduleVerify(form);
-  }
-
-  function scheduleVerify(form) {
-    clearTimeout(verifyTimer);
-    verifyTimer = setTimeout(() => verifyAccount(form), 450);
   }
 
   async function verifyAccount(form) {
     const status = document.getElementById('acctStatus');
+    const box = document.getElementById('verifiedBox');
     const code = form.bank.value;
     const acct = form.account.value;
     const nm = document.querySelector('#bankForm [name="acctName"]');
     if (!status) return;
-    if (acct.length !== 10 || !code) { status.textContent = ''; status.className = 'acct-status'; verifiedAccount = null; if (nm) nm.value = ''; return; }
-    verifiedAccount = null;
-    if (nm) nm.value = '';
+    if (acct.length !== 10 || !code) {
+      clearVerification();
+      status.textContent = 'Select your bank and enter a 10-digit account number.';
+      status.className = 'acct-status err';
+      return;
+    }
+    clearVerification();
     status.textContent = 'Verifying account…'; status.className = 'acct-status verifying';
     try {
       const r = await fetch('/api/resolve?acc_no=' + encodeURIComponent(acct) + '&bank=' + encodeURIComponent(code));
@@ -614,6 +623,7 @@
       if (name) {
         verifiedAccount = { code, account: acct, name };
         if (nm) nm.value = name;
+        if (box) box.hidden = false;
         status.textContent = '✓ ' + name; status.className = 'acct-status ok';
         state.bank = { bank: document.getElementById('bankSearch').value.trim(), code, name, account: acct, verified: true };
         save();
@@ -715,6 +725,13 @@
       const bankItem = e.target.closest && e.target.closest('#bankDropdown [data-code]');
       if (bankItem) { e.preventDefault(); selectBank(bankItem.dataset.code, bankItem.dataset.name); return; }
 
+      if (e.target.closest && e.target.closest('#verifyBtn')) {
+        e.preventDefault();
+        const bf = document.getElementById('bankForm');
+        if (bf) verifyAccount(bf);
+        return;
+      }
+
       if (!(e.target.closest && e.target.closest('.bank-field'))) { const dd = $('#bankDropdown'); if (dd) dd.classList.remove('open'); }
 
       const tabEl = e.target.closest('[data-tab]');
@@ -763,8 +780,7 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'bankSearch') {
         const c = document.getElementById('bankCode'); if (c) c.value = '';
-        verifiedAccount = null;
-        const nm = document.querySelector('#bankForm [name="acctName"]'); if (nm) nm.value = '';
+        clearVerification();
         renderBankDropdown();
         return;
       }
@@ -772,9 +788,7 @@
       if (!f) return;
       if (e.target.name === 'account') {
         e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
-        verifiedAccount = null;
-        const nm = document.querySelector('#bankForm [name="acctName"]'); if (nm) nm.value = '';
-        scheduleVerify(f);
+        clearVerification();
       }
     });
 
