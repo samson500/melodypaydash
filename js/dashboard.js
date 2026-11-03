@@ -535,7 +535,7 @@
           '</div>' +
           '<label class="field"><span>Account number</span><input class="input" name="account" inputmode="numeric" maxlength="10" placeholder="10-digit account number" value="' + esc(bank.account || '') + '" /><em class="err"></em></label>' +
           '<div class="acct-status" id="acctStatus"></div>' +
-          '<label class="field"><span>Account name</span><input class="input" name="acctName" placeholder="Auto-verified name" value="' + esc(bank.name || '') + '" /><em class="err"></em></label>' +
+          '<label class="field"><span>Account name</span><input class="input" name="acctName" placeholder="Auto-verified name" value="' + esc(bank.name || '') + '" readonly title="Verified automatically" /><em class="err"></em></label>' +
           '<button class="btn-primary full" type="submit">' + icon('bank') + ' Save Account</button>' +
         '</form></section>' +
 
@@ -549,6 +549,7 @@
 
   let banksCache = null;
   let verifyTimer = null;
+  let verifiedAccount = null;
 
   async function populateBanks() {
     if (!document.getElementById('bankSearch')) return;
@@ -582,6 +583,9 @@
     const c = document.getElementById('bankCode');
     if (s) s.value = name;
     if (c) c.value = code;
+    verifiedAccount = null;
+    const nm = document.querySelector('#bankForm [name="acctName"]');
+    if (nm) nm.value = '';
     const dd = document.getElementById('bankDropdown');
     if (dd) dd.classList.remove('open');
     const form = document.getElementById('bankForm');
@@ -597,15 +601,19 @@
     const status = document.getElementById('acctStatus');
     const code = form.bank.value;
     const acct = form.account.value;
+    const nm = document.querySelector('#bankForm [name="acctName"]');
     if (!status) return;
-    if (acct.length !== 10 || !code) { status.textContent = ''; status.className = 'acct-status'; return; }
+    if (acct.length !== 10 || !code) { status.textContent = ''; status.className = 'acct-status'; verifiedAccount = null; if (nm) nm.value = ''; return; }
+    verifiedAccount = null;
+    if (nm) nm.value = '';
     status.textContent = 'Verifying account…'; status.className = 'acct-status verifying';
     try {
       const r = await fetch('/api/resolve?acc_no=' + encodeURIComponent(acct) + '&bank=' + encodeURIComponent(code));
       const j = await r.json();
       const name = j && j.ok && j.result && j.result[0] && j.result[0].account_name;
       if (name) {
-        form.acctName.value = name;
+        verifiedAccount = { code, account: acct, name };
+        if (nm) nm.value = name;
         status.textContent = '✓ ' + name; status.className = 'acct-status ok';
         state.bank = { bank: document.getElementById('bankSearch').value.trim(), code, name, account: acct, verified: true };
         save();
@@ -738,13 +746,16 @@
         const f = e.target;
         const code = f.bank.value;
         const bankName = (document.getElementById('bankSearch') ? document.getElementById('bankSearch').value.trim() : '') || (state.bank && state.bank.bank) || 'Bank';
-        const holder = f.acctName.value.trim();
+        const acct = f.account.value;
         if (!code) { feedback({ type: 'error', title: 'Bank required', message: 'Please select your bank.' }); return; }
-        if (!/^\d{10}$/.test(f.account.value)) { feedback({ type: 'error', title: 'Invalid account', message: 'Account number must be 10 digits.' }); return; }
-        if (!holder) { feedback({ type: 'error', title: 'Not verified', message: 'Enter a valid account number so we can verify the account name.' }); return; }
-        state.bank = { bank: bankName, code, name: holder, account: f.account.value, verified: true };
+        if (!/^\d{10}$/.test(acct)) { feedback({ type: 'error', title: 'Invalid account', message: 'Account number must be 10 digits.' }); return; }
+        const fresh = verifiedAccount && verifiedAccount.code === code && verifiedAccount.account === acct;
+        const savedOk = state.bank && state.bank.verified && state.bank.code === code && state.bank.account === acct && state.bank.name;
+        if (!fresh && !savedOk) { feedback({ type: 'error', title: 'Account not verified', message: 'Wait for the account name to be verified automatically, then save.' }); return; }
+        const holder = fresh ? verifiedAccount.name : state.bank.name;
+        state.bank = { bank: bankName, code, name: holder, account: acct, verified: true };
         save();
-        feedback({ title: 'Account linked', message: bankName + ' ••••' + f.account.value.slice(-4) + ' — ' + holder });
+        feedback({ title: 'Account linked', message: bankName + ' ••••' + acct.slice(-4) + ' — ' + holder });
         render('profile', true);
       }
     });
@@ -752,6 +763,8 @@
     document.addEventListener('input', (e) => {
       if (e.target.id === 'bankSearch') {
         const c = document.getElementById('bankCode'); if (c) c.value = '';
+        verifiedAccount = null;
+        const nm = document.querySelector('#bankForm [name="acctName"]'); if (nm) nm.value = '';
         renderBankDropdown();
         return;
       }
@@ -759,6 +772,8 @@
       if (!f) return;
       if (e.target.name === 'account') {
         e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+        verifiedAccount = null;
+        const nm = document.querySelector('#bankForm [name="acctName"]'); if (nm) nm.value = '';
         scheduleVerify(f);
       }
     });
