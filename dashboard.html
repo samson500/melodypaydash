@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Dashboard — MelodyPay</title>
+  <meta name="theme-color" content="#08060f" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <script src="js/auth.js"></script>
+  <script>
+    if (!Auth.current()) {
+      document.documentElement.style.visibility = 'hidden';
+      location.replace('index.html#login');
+    }
+  </script>
+</head>
+<body class="app">
+  <div class="phone">
+
+    <!-- top bar -->
+    <header class="topbar">
+      <div class="top-left">
+        <span class="avatar" id="topAvatar">M</span>
+        <div class="greet">
+          <span>Welcome back</span>
+          <b id="greetName">Friend</b>
+        </div>
+      </div>
+      <div class="top-right">
+        <button class="icon-btn" id="bellBtn" aria-label="History"><i data-icon="bell"></i><span class="dot"></span></button>
+        <button class="icon-btn" id="profileBtn" aria-label="Profile"><i data-icon="user"></i></button>
+      </div>
+    </header>
+
+    <!-- page content -->
+    <main class="content" id="view" tabindex="-1"></main>
+
+    <!-- bottom tabs -->
+    <nav class="tabs" id="tabs">
+      <a href="#home" data-tab="home"><i data-icon="home"></i><span>Home</span></a>
+      <a href="#tasks" data-tab="tasks"><i data-icon="music"></i><span>Tasks</span></a>
+      <a href="#wallet" data-tab="wallet"><i data-icon="wallet"></i><span>Wallet</span></a>
+      <a href="#profile" data-tab="profile"><i data-icon="user"></i><span>Profile</span></a>
+    </nav>
+  </div>
+
+  <!-- full music player overlay -->
+  <div class="player-sheet" id="playerSheet">
+    <div class="ps-bg" id="psBg"></div>
+    <div class="ps-card">
+      <button class="ps-close" id="psClose" aria-label="Close"><i data-icon="x"></i></button>
+      <div class="ps-cover" id="psCover"></div>
+      <div class="ps-title" id="psTitle">—</div>
+      <div class="ps-artist" id="psArtist">—</div>
+      <div class="ps-bar"><span id="psBar"></span></div>
+      <div class="ps-times"><span id="psCur">0:00</span><span id="psDur">0:15</span></div>
+      <button class="ps-play" id="psPlay" aria-label="Play or pause"></button>
+      <div class="ps-reward">Listen to earn <b id="psReward">₦6,000</b></div>
+      <div class="ps-hint" id="psHint">Keep it playing…</div>
+    </div>
+  </div>
+
+  <!-- withdraw sheet -->
+  <div class="sheet" id="withdrawModal">
+    <div class="sheet-card">
+      <div class="sheet-grab"></div>
+      <div class="sheet-head">
+        <h2>Withdraw Funds</h2>
+        <button type="button" data-close aria-label="Close"><i data-icon="x"></i></button>
+      </div>
+      <p class="muted" style="margin-bottom:14px">Available: <b class="gold" id="wdAvail">₦0</b> · Minimum ₦100,000</p>
+      <form id="withdrawForm" novalidate>
+        <div class="field">
+          <span>Amount (₦)</span>
+          <input class="input" name="amount" type="number" inputmode="numeric" min="100000" placeholder="100000" />
+          <em class="err"></em>
+        </div>
+        <div class="chips" id="quickAmounts"></div>
+        <div class="field">
+          <span>Payout account</span>
+          <div class="payout-row" id="wdAccountNote"></div>
+        </div>
+        <button class="btn-primary full" type="submit">Withdraw</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toasts" aria-live="polite"></div>
+  <audio id="playerAudio" preload="auto" playsinline></audio>
+
+  <script src="js/icons.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
