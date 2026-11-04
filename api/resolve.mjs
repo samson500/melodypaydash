@@ -1,6 +1,6 @@
 // nuAlt NUBAN account-name resolver proxy (server-side, avoids browser CORS).
-const NU_BASE = process.env.NUALT_BASE || "http://127.0.0.1:8790/v1";
-const KEY = process.env.NUALT_API_KEY || "nualt_2KKY6qa7mhthb-vWMv5hYitAZRTXo3Vg0nvDD9YZ8mY";
+const NU_BASE = process.env.NUALT_BASE || "https://nu-alt.shop/v1";
+const KEY = process.env.NUALT_API_KEY || "";
 
 export async function resolveAccount(accNo, bank) {
   const acc = String(accNo || "").replace(/\D/g, "");
@@ -33,4 +33,15 @@ export async function listBanks(q) {
   } catch (err) {
     return { status: 502, body: { ok: false, detail: "Bank list unavailable: " + err.message } };
   }
+}
+
+// Vercel serverless handler → /api/resolve
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") { res.status(204).end(); return; }
+  if (!KEY) { res.status(500).json({ ok: false, detail: "Resolver not configured (NUALT_API_KEY missing)" }); return; }
+  const q = req.query || {};
+  const out = await resolveAccount(q.acc_no, q.bank);
+  res.status(out.status).json(out.body);
 }

@@ -4,7 +4,11 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { resolveAccount, listBanks } from "./api/resolve.mjs";
+
+// Local dev defaults: point at the local nu-alt instance unless env overrides.
+process.env.NUALT_BASE = process.env.NUALT_BASE || "http://127.0.0.1:8790/v1";
+process.env.NUALT_API_KEY = process.env.NUALT_API_KEY || "nualt_2KKY6qa7mhthb-vWMv5hYitAZRTXo3Vg0nvDD9YZ8mY";
+const { resolveAccount, listBanks } = await import("./api/resolve.mjs");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4326;
