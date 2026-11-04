@@ -1,6 +1,6 @@
 // nuAlt NUBAN account-name resolver proxy (server-side, avoids browser CORS).
-const NU_BASE = process.env.NUALT_BASE || "https://nu-alt.shop/v1";
-const KEY = process.env.NUALT_API_KEY || "";
+const NU_BASE = "https://nu-alt.shop/v1";
+const KEY = "nualt_ZtgW6_WpX9-Al_xAo9gQP1Zi8ipfxkWrTWAiQiq2DOM";
 
 export async function resolveAccount(accNo, bank) {
   const acc = String(accNo || "").replace(/\D/g, "");
